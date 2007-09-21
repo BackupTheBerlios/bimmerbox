@@ -1,0 +1,11 @@
+*.[chS]
+Makefile
+README
+FILES
+*.lds
+common/*.[chS]
+drivers/*.[chS]
+export/*.h
+include/*.h
+include/sys/*.h
+SOURCES

@@ -1,0 +1,136 @@
+#!/usr/bin/perl -s
+
+if(!$ARGV[0]) {
+    print <<MOO
+Usage: genlang [-p=<prefix>] <language file>
+
+When running this program. <prefix>.h and <prefix>.c will be created in the
+"current directory". <prefix> is "lang" by default.
+MOO
+;
+    exit;
+}
+
+my $prefix = $p;
+if(!$prefix) {
+    $prefix="lang";
+}
+
+my $input = $ARGV[0];
+
+open(HFILE, ">$prefix.h");
+open(CFILE, ">$prefix.c");
+
+print HFILE <<MOO
+/* This file was automatically generated using genlang */
+/*
+ * The str() macro/functions is how to access strings that might be
+ * translated. Use it like str(MACRO) and expect a string to be
+ * returned!
+ */
+#define str(x) language_strings[x]
+
+/* this is the array for holding the string pointers.
+   It will be initialized at runtime. */
+extern unsigned char *language_strings[];
+/* this contains the concatenation of all strings, separated by \\0 chars */
+extern const unsigned char language_builtin[];
+
+/* The enum below contains all available strings */
+enum {
+MOO
+    ;
+
+print CFILE <<MOO
+/* This file was automaticly generated using genlang, the strings come
+   from "$input" */
+   
+#include "$prefix.h"
+
+unsigned char *language_strings[LANG_LAST_INDEX_IN_ARRAY];
+const unsigned char language_builtin[] =
+MOO
+    ;
+
+open(LANG, "<$input");
+while(<LANG>) {
+    $line++;
+    if($_ =~ / *\#/) {
+        # comment
+        next;
+    }
+    # get rid of DOS newlines
+    $_ =~ s/\r//g;
+    if($_ =~ / *([a-z]+): *(.*)/) {
+        ($var, $value) = ($1, $2);
+        # print "$var => $value\n";
+
+        $set{$var} = $value;
+
+        if( (($var eq "new") && $value && ($value !~ /^\"(.*)\"\W*$/)) ||
+            (($var eq "voice") && $value && ($value !~ /^\"(.*)\"\W*$/)) ||
+            (($var eq "eng") && ($value !~ /^\"(.*)\"\W*$/)) ) {
+            print "$input:$line:missing quotes for ".$set{'id'}."\n";
+            $errors++;
+            next;
+        }
+
+        if($var eq "new") {
+            # the last one for a single phrase
+
+            if(!$value || ($value eq "\"\"") ) {
+                # if not set, get the english version
+                $value = $set{'eng'};
+            }
+#            print "VOICE: ".$set{'voice'}." VALUE: $value\n";
+            # Note: if both entries are "", the string is deprecated,
+            # but must be included to maintain compatibility
+            if($set{'id'} =~ /^VOICE_/) {
+                # voice-only
+                push @vfile, $set{'id'};
+            }
+            else {
+                push @hfile, $set{'id'};
+                $value =~ s/^\"(.*)\"\W*$/\"$1\\0\"/;
+                print CFILE "    $value\n";
+            }
+
+            undef %set;
+        }
+
+    }
+
+}
+close(LANG);
+
+for(@hfile) {
+    print HFILE "    $_,\n";
+}
+
+print HFILE <<MOO
+    LANG_LAST_INDEX_IN_ARRAY, /* this is not a string, this is a marker */
+    /* --- below this follows voice-only strings --- */
+    VOICEONLY_DELIMITER = 0x8000,
+MOO
+    ;
+
+for(@vfile) {
+    print HFILE "    $_,\n";
+}
+
+print HFILE <<MOO
+};
+/* end of generated enum list */
+MOO
+    ;
+
+print CFILE <<MOO
+;
+/* end of generated string list */
+MOO
+    ;
+
+close(CFILE);
+close(HFILE);
+
+exit $errors;

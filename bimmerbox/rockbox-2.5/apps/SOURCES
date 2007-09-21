@@ -1,0 +1,60 @@
+#ifdef ROCKBOX_HAS_LOGF
+logfdisp.c
+#endif
+alarm_menu.c
+abrepeat.c
+bookmark.c
+debug_menu.c
+filetypes.c
+language.c
+main.c
+main_menu.c
+menu.c
+misc.c
+onplay.c
+playlist.c
+playlist_menu.c
+playlist_viewer.c
+plugin.c
+screens.c
+settings.c
+settings_menu.c
+sleeptimer.c
+sound_menu.c
+status.c
+#if !defined(SIMULATOR) || CONFIG_CODEC == SWCODEC
+talk.c
+#endif
+tree.c
+dbtree.c
+database.c
+filetree.c
+wps-display.c
+wps.c
+#ifdef HAVE_LCD_CHARCELLS
+player/icons.c
+player/keyboard.c
+#endif
+#ifdef HAVE_LCD_BITMAP
+recorder/bmp.c
+recorder/icons.c
+recorder/keyboard.c
+recorder/peakmeter.c
+recorder/widgets.c
+#endif
+#ifdef CONFIG_TUNER
+recorder/radio.c
+#endif
+#ifdef HAVE_RECORDING
+recorder/recording.c
+#endif
+#if CONFIG_CODEC == SWCODEC
+pcmbuf.c
+playback.c
+metadata.c
+codecs.c
+dsp.c
+#ifndef SIMULATOR
+pcm_recording.c
+#endif
+#endif

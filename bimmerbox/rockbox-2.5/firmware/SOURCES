@@ -1,0 +1,142 @@
+#ifdef ROCKBOX_HAS_LOGF
+logf.c
+#endif
+#ifndef SIMULATOR
+backlight.c
+#endif
+buffer.c
+common/atoi.c
+common/ctype.c
+#ifndef SIMULATOR
+common/dir.c
+common/file.c
+#endif
+common/disk.c
+common/errno.c
+common/memcmp.c
+common/memchr.c
+common/qsort.c
+common/random.c
+common/sprintf.c
+common/strcasecmp.c
+common/strcasestr.c
+common/strcat.c
+common/strchr.c
+common/strcmp.c
+common/strcpy.c
+#if (CONFIG_CPU == SH7034) && !defined(SIMULATOR)
+common/strlen_a.S
+#else
+common/strlen.c
+#endif
+common/strncmp.c
+common/strncpy.c
+common/strrchr.c
+common/strtok.c
+common/timefuncs.c
+#if CONFIG_CPU == SH7034
+common/memcpy_a.S
+common/memset_a.S
+#elif defined(CPU_COLDFIRE)
+common/memcpy.c
+common/memset_a.S
+#else
+common/memcpy.c
+common/memset.c
+#endif
+#ifdef HAVE_LCD_CHARCELLS
+drivers/lcd-player-charset.c
+drivers/lcd-player.c
+#endif
+#ifdef HAVE_LCD_BITMAP
+bidi.c
+#if LCD_DEPTH == 2
+drivers/lcd-h100.c
+#elif LCD_DEPTH == 1
+drivers/lcd-recorder.c
+#endif
+#endif
+drivers/power.c
+#ifdef CONFIG_LED
+drivers/led.c
+#endif
+#ifndef SIMULATOR
+drivers/adc.c
+#ifdef HAVE_MMC
+drivers/ata_mmc.c
+#else
+drivers/ata.c
+#endif
+drivers/button.c
+drivers/dac.c
+drivers/fat.c
+#ifdef CONFIG_TUNER
+#if (CONFIG_TUNER & S1A0903X01)
+drivers/fmradio.c
+tuner_samsung.c
+#endif
+#if (CONFIG_TUNER & TEA5767)
+drivers/fmradio_i2c.c
+tuner_philips.c
+#endif
+#endif
+#if CONFIG_I2C == I2C_COLDFIRE
+drivers/i2c-coldfire.c
+#else
+drivers/i2c.c
+#endif
+#if CONFIG_CODEC != SWCODEC
+drivers/mas.c
+#endif
+#ifdef HAVE_RTC
+drivers/rtc.c
+#endif
+drivers/serial.c
+#endif /* !SIMULATOR */
+#ifdef HAVE_LCD_BITMAP
+font.c
+#endif
+id3.c
+#ifndef SIMULATOR
+hwcompat.c
+kernel.c
+rolo.c
+thread.c
+timer.c
+crt0.S
+#endif  
+mp3_playback.c
+mp3data.c
+#if CONFIG_CODEC != SWCODEC
+mpeg.c
+#endif
+#ifndef WIN32 /* the win32 sim has its own versin of these: */
+panic.c
+debug.c
+#endif
+powermgmt.c
+system.c
+usb.c
+#if CONFIG_CPU == SH7034
+bitswap.S
+descramble.S
+#endif
+drivers/lcd.S
+#ifdef HAVE_REMOTE_LCD
+drivers/lcd-h100-remote.c
+#endif
+#if defined(HAVE_UDA1380) && !defined(SIMULATOR)
+drivers/uda1380.c
+#elif defined(HAVE_TLV320) && !defined(SIMULATOR)
+drivers/tlv320.c
+#endif
+#if (CONFIG_CODEC == SWCODEC) && !defined(SIMULATOR)
+pcm_playback.c
+#endif
+#if CONFIG_CODEC == SWCODEC
+replaygain.c
+#endif
+#if defined(CPU_COLDFIRE) && !defined(SIMULATOR)
+pcm_record.c
+#endif
+sound.c

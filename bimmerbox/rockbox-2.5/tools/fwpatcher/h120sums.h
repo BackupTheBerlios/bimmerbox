@@ -1,0 +1,15 @@
+/* Checksums of firmwares for ihp_120 */
+/* order: unpatched, patched */
+
+/* 1.63eu */
+{"14488347a171480c63c94bc7b885225d", "1bc21aafd9da0d108698eaa40eddc663"},
+/* 1.63k */
+{"3401fe8845e569156abfaddf05ca7771", "8498aca1e3cec7b383b3957060917f30"},
+/* 1.63us */
+{"d9078209105c186cee5246055fdb99c9", "1c662d8c15e3b23ed7bc220683f9dc98"},
+/* 1.65eu */
+{"c9e71aac4a498f1e2f0e684c2d554ea1", "e8dffa26fe3a424b57081133acdd4194"},
+/* 1.65k */
+{"360c0c565266f84e9bca610c596f3207", "403b50197e614d95c01853be0a2ea155"},
+/* 1.65us */
+{"b9e516d4b8a0265605f46f254897bfb0", "fc559f9797e5a11f7e84dff19d1ceb6d"},

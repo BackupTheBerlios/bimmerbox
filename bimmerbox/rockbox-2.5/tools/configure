@@ -1,0 +1,879 @@
+#!/bin/sh
+#             __________               __   ___.
+#   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
+#   Source     |       _//  _ \_/ ___\|  |/ /| __ \ /  _ \  \/  /
+#   Jukebox    |    |   (  <_> )  \___|    < | \_\ (  <_> > <  <
+#   Firmware   |____|_  /\____/ \___  >__|_ \|___  /\____/__/\_ \
+#                     \/            \/     \/    \/            \/
+# $Id: configure,v 1.1 2007/09/21 18:43:42 duke4d Exp $
+#
+
+# global CC options for all platforms
+CCOPTS="-W -Wall -O -nostdlib -ffreestanding -Wstrict-prototypes"
+
+use_logf="#undef ROCKBOX_HAS_LOGF"
+use_simsound="#undef ROCKBOX_HAS_SIMSOUND"
+
+scriptver=`echo '$Revision: 1.1 $' | sed -e 's:\\$::g' -e 's/Revision: //'`
+
+#
+# Begin Function Definitions
+#
+input() {
+    read response
+    echo $response
+}
+
+prefixtools () {
+ prefix="$1"
+ CC=${prefix}gcc
+ WINDRES=${prefix}windres
+ DLLTOOL=${prefix}dlltool
+ DLLWRAP=${prefix}dllwrap
+ RANLIB=${prefix}ranlib
+ LD=${prefix}ld
+ AR=${prefix}ar
+ AS=${prefix}as
+ OC=${prefix}objcopy
+}
+
+crosswincc () {
+ # naive approach to selecting a mingw cross-compiler on linux/*nix
+ echo "Enabling win32 crosscompiling"
+
+ prefixtools i586-mingw32msvc-
+
+ LDOPTS="-lgdi32 -luser32 -mwindows"
+ # add cross-compiler option(s)
+ GCCOPTS="$GCCOPTS -mno-cygwin"
+
+ output="rockboxui.exe" # use this as output binary name
+ crosscompile="yes"
+ endian="little" # windows is little endian
+}
+
+checksoundcard () {
+    if test -n "$codecs"; then
+        if test -f "/usr/include/sys/soundcard.h"; then
+         # We have a header file so we can build the sound code
+            use_simsound="#define ROCKBOX_HAS_SIMSOUND 1"
+            echo "Enabled PCM sound playback in simulator"
+        fi # header file present
+    fi # has codecs
+}
+
+
+simcc () {
+
+ # default tool setup for native building
+ prefixtools ""
+
+ GCCOPTS='-W -Wall -g -fno-builtin'
+
+ output="rockboxui" # use this as default output binary name
+
+ case $uname in
+   CYGWIN*)
+   echo "Cygwin host detected"
+
+   if [ "$simver" = "win32" ]; then
+       # win32 version
+       GCCOPTS="$GCCOPTS -mno-cygwin -DNOCYGWIN"
+       LDOPTS="-lgdi32 -luser32 -mno-cygwin"
+   else
+       # x11 version
+       GCCOPTS="$GCCOPTS"
+       LDOPTS='-L/usr/X11R6/lib -lSM -lICE -lXt -lX11 -lXmu -lSM -lICE -lX11 -lpthread'
+       checksoundcard
+   fi
+   output="rockboxui.exe" # use this as output binary name
+   ;;
+
+   Linux)
+   echo "Linux host detected"
+   GCCOPTS="$GCCOPTS"
+   LDOPTS='-L/usr/X11R6/lib -lX11 -lm -lXt -lXmu -lnsl -ldl -lpthread'
+   if [ "$simver" = "win32" ]; then
+       crosswincc # setup cross-compiler
+   else
+       checksoundcard
+   fi # not a cross-compiler
+   ;;
+
+   FreeBSD)
+   echo "FreeBSD host detected"
+   LDOPTS='-L/usr/X11R6/lib -lX11 -lm -lXt -lXmu -dl -lpthread'
+   if [ "$simver" = "win32" ]; then
+     crosswincc # setup cross-compiler
+   fi
+   ;;
+
+   *)
+   echo "Unsupported system: $uname, fix configure and retry"
+   exit
+   ;;
+ esac
+
+
+ if test "X$crosscompile" != "Xyes"; then
+   id=$$
+   cat >/tmp/conftest-$id.c <<EOF
+#include <stdio.h>
+int main(int argc, char **argv)
+{
+  int var=0;
+  char *varp = (char *)&var;
+  *varp=1;
+
+  printf("%d\n", var);
+  return 0;
+}
+EOF
+
+   $CC -o /tmp/conftest-$id /tmp/conftest-$id.c 2>/dev/null
+
+   if test `/tmp/conftest-$id 2>/dev/null` -gt "1"; then
+     # big endian
+     endian="big"
+   else
+     # little endian
+     endian="little"
+   fi
+   echo "Simulator environment deemed $endian endian"
+
+   # use wildcard here to make it work even if it was named *.exe like
+   # on cygwin
+   rm -f /tmp/conftest-$id*
+ fi
+}
+
+shcc () {
+ prefixtools sh-elf-
+ GCCOPTS="$CCOPTS -m1"
+ GCCOPTIMIZE="-fomit-frame-pointer -fschedule-insns"
+ endian="big"
+}
+
+calmrisccc () {
+ prefixtools calmrisc16-unknown-elf-
+ GCCOPTS="-Wl\,--no-check-sections $CCOPTS"
+ GCCOPTIMIZE="-fomit-frame-pointer"
+ endian="big"
+}
+
+coldfirecc () {
+ prefixtools m68k-elf-
+ GCCOPTS="$CCOPTS -g -m5200 -Wa\,-m5249 -malign-int -mstrict-align"
+ GCCOPTIMIZE="-fomit-frame-pointer"
+ endian="big"
+}
+
+whichaddr () {
+    case $archos in
+    gmini120|gminisp)
+	echo ""
+	echo "Where do you want the firmware to be flashed?"
+	echo "WARNING: Do not answer this question lightly,"
+	echo "unless you don't plan to flash your gmini."
+	echo "In this case, reply '0x10000' (no quotes) and "
+	echo "re-configure when you know better."
+	loadaddress=`input`
+
+        if [ "0$loadaddress" = "0" ]; then
+            #default
+            loadaddress="0x10000";
+        fi
+        echo "You selected $loadaddress"
+	;;
+    *)
+	;;
+    esac
+}
+
+whichdevel () {
+  ##################################################################
+  # Prompt for specific developer options
+  #
+  echo ""
+  echo "Enter your developer options (press enter when done)"
+  echo "(D)EBUG, (L)ogf, (S)imulator"
+  cont=1
+
+  while [ $cont = "1" ]; do
+
+    option=`input`;
+
+    case $option in
+      [Dd])
+        echo "define DEBUG"
+        debug="-DDEBUG"
+        GCCOPTS="$GCCOPTS -g -DDEBUG"
+        ;;
+      [Ll])
+        logf="yes"
+        echo "logf() support enabled"
+        use_logf="#define ROCKBOX_HAS_LOGF 1"
+        ;;
+      [Ss])
+        echo "Simulator build enabled"
+        simulator="yes"
+        ;;
+      *)
+        echo "done"
+        cont=0
+        ;;
+    esac 
+  done
+
+  if [ "yes" = "$simulator" ]; then
+    debug="-DDEBUG"
+    extradefines="-DSIMULATOR"
+    whichsim
+  fi
+}
+
+whichsim () {
+
+if [ -z "$simver" ]; then
+
+  ##################################################################
+  # Figure out win32/x11 GUI
+  #
+  echo ""
+  echo "Build (W)in32 or  (X)11 GUI version? (X)"
+
+  option=`input`;
+
+  case $option in
+   [Ww])
+     simver="win32"
+
+     WINDRES=windres
+     DLLTOOL=dlltool
+     DLLWRAP=dllwrap
+
+     # make sure the code knows this is for win32
+     extradefines="$extradefines -DWIN32"
+     ;;
+   *)
+     simver="x11"
+     ;;
+   esac
+   echo "Selected $simver simulator"
+fi
+}
+
+picklang() {
+    # figure out which languages that are around
+    for file in $rootdir/apps/lang/*.lang; do
+        clean=`echo $file | sed -e 's:.*/::g' | cut "-d." -f1`
+        langs="$langs $clean"
+    done
+
+    num=1
+    for one in $langs; do
+        echo "$num. $one"
+        num=`expr $num + 1`
+    done
+
+    read pick
+    return $pick;
+}
+
+whichlang() {
+    num=1
+    for one in $langs; do
+        if [ "$num" = "$pick" ]; then
+            echo $one
+            return
+        fi
+        num=`expr $num + 1`
+    done
+}
+
+if test "$1" = "--help"; then
+  echo "Rockbox configure script."
+  echo "Invoke this in a directory to generate a Makefile to build Rockbox"
+  echo "Do *NOT* run this within the tools directory!"
+  echo ""
+  echo "Usage: configure [--ccache]"
+  exit
+fi
+
+if test "$1" = "--ccache"; then
+  echo "Enable ccache for building"
+  ccache="yes"
+fi
+
+if test -r "configure"; then
+ # this is a check for a configure script in the current directory, it there
+ # is one, try to figure out if it is this one!
+
+ if { grep "^#   Jukebox" configure >/dev/null 2>&1 ; } then
+   echo "WEEEEEEEEP. Don't run this configure script within the tools directory."
+   echo "It will only cause you pain and grief. Instead do this:"
+   echo ""
+   echo " cd .."
+   echo " mkdir build-dir"
+   echo " cd build-dir"
+   echo " ../tools/configure"
+   echo ""
+   echo "Much happiness will arise from this. Enjoy"
+   exit
+ fi
+fi
+
+if [ "$target" = "--help" -o \
+     "$target" = "-h" ]; then
+  echo "Just invoke the script and answer the questions."
+  echo "This script will write a Makefile for you"
+  exit
+fi
+
+# get our current directory
+pwd=`pwd`;
+
+if [ "$target" = "update" ]; then
+  echo "configure update is unfortunately no longer supported"
+  exit
+else
+
+echo "This script will setup your Rockbox build environment."
+echo "Further docs here: http://www.rockbox.org/"
+echo ""
+
+fi
+
+if [ -z "$rootdir" ]; then
+  ##################################################################
+  # Figure out where the source code root is!
+  #
+
+  firmfile="crt0.S" # a file to check for in the firmware root dir
+
+  for dir in  . .. ../.. ../rockbox*; do
+    if [ -f $dir/firmware/$firmfile ]; then
+     rootdir=$dir
+     break
+    fi
+  done
+
+  if [ -z "$rootdir" ]; then
+    echo "This script couldn't find your source code root directory. Please enter the"
+    echo "full path to the source code directory here:"
+
+    firmdir=`input`
+  fi
+
+  #####################################################################
+  # Convert the possibly relative directory name to an absolute version
+  #
+  now=`pwd`
+  cd $rootdir
+  rootdir=`pwd`
+
+  echo "Using this source code root directory:"
+  echo $rootdir
+  echo ""
+
+  # cd back to the build dir
+  cd $now
+fi
+
+apps="apps"
+appsdir='\$(ROOTDIR)/apps'
+
+##################################################################
+# Figure out target platform
+#
+
+  echo "Enter target platform:"
+
+  echo "1 - Archos Player/Studio"
+  echo "2 - Archos Recorder"
+  echo "3 - Archos FM Recorder"
+  echo "4 - Archos Recorder v2"
+  echo "5 - Archos Gmini 120"
+  echo "6 - Archos Gmini SP"
+  echo "7 - Archos Ondio SP"
+  echo "8 - Archos Ondio FM"
+  echo "9 - iriver H120/H140"
+  echo "10 - iriver H320/H340"
+  echo "11 - iriver iHP-100/iHP-110/iHP-115"
+  echo "12 - iAudio X5"
+
+  getit=`input`;
+
+  case $getit in
+
+   1)
+    archos="player"
+    target="-DARCHOS_PLAYER"
+    shcc
+    tool="$rootdir/tools/scramble"
+    output="archos.mod"
+    appextra="player"
+    archosrom="$pwd/rombox.ucl"
+    flash="$pwd/rockbox.ucl"
+    plugins="yes"
+    codecs=""
+    ;;
+
+   2)
+    archos="recorder"
+    target="-DARCHOS_RECORDER"
+    shcc
+    tool="$rootdir/tools/scramble"
+    output="ajbrec.ajz"
+    appextra="recorder"
+    archosrom="$pwd/rombox.ucl"
+    flash="$pwd/rockbox.ucl"
+    plugins="yes"
+    codecs=""
+    ;;
+
+   3)
+    archos="fmrecorder"
+    target="-DARCHOS_FMRECORDER"
+    shcc
+    tool="$rootdir/tools/scramble -fm"
+    output="ajbrec.ajz"
+    appextra="recorder"
+    archosrom="$pwd/rombox.ucl"
+    flash="$pwd/rockbox.ucl"
+    plugins="yes"
+    codecs=""
+    ;;
+
+   4)
+    archos="recorderv2"
+    target="-DARCHOS_RECORDERV2"
+    shcc
+    tool="$rootdir/tools/scramble -v2"
+    output="ajbrec.ajz"
+    appextra="recorder"
+    archosrom="$pwd/rombox.ucl"
+    flash="$pwd/rockbox.ucl"
+    plugins="yes"
+    codecs=""
+    ;;
+
+   5)
+    archos="gmini120"
+    target="-DARCHOS_GMINI120"
+    memory=16 # fixed size (16 is a guess, remove comment when checked)
+    calmrisccc
+    tool="cp" # might work for now!
+    output="rockbox.gmini"
+    appextra="recorder"
+    archosrom=""
+    flash=""
+    plugins="" # disabled for now, enable later on
+    codecs="libmad"
+    ;;
+
+   6)
+    archos="gminisp"
+    target="-DARCHOS_GMINISP"
+    memory=16 # fixed size (16 is a guess, remove comment when checked)
+    calmrisccc
+    tool="cp" # might work for now!
+    output="rockbox.gmini"
+    appextra="recorder"
+    archosrom=""
+    flash=""
+    plugins="" # disabled for now, enable later on
+    codecs="libmad"
+    ;;
+
+   7)
+    archos="ondiosp"
+    target="-DARCHOS_ONDIOSP"
+    shcc
+    tool="$rootdir/tools/scramble -osp"
+    output="ajbrec.ajz"
+    appextra="recorder"
+    archosrom="$pwd/rombox.ucl"
+    flash="$pwd/rockbox.ucl"
+    plugins="yes"
+    codecs=""
+    ;;
+
+   8)
+    archos="ondiofm"
+    target="-DARCHOS_ONDIOFM"
+    shcc
+    tool="$rootdir/tools/scramble -ofm"
+    output="ajbrec.ajz"
+    appextra="recorder"
+    archosrom="$pwd/rombox.ucl"
+    flash="$pwd/rockbox.ucl"
+    plugins="yes"
+    codecs=""
+    ;;
+
+   9)
+    archos="h120"
+    target="-DIRIVER_H120"
+    memory=32 # always
+    coldfirecc
+    tool="$rootdir/tools/scramble -add=h120"
+    output="rockbox.iriver"
+    appextra="recorder"
+    archosrom=""
+    flash=""
+    plugins="yes"
+    codecs="libmad liba52 libFLAC libTremor libwavpack dumb libmusepack"
+    ;;
+
+   10)
+    archos="h300"
+    target="-DIRIVER_H300"
+    memory=32 # always
+    coldfirecc
+    tool="$rootdir/tools/scramble -add=h300"
+    output="rockbox.iriver"
+    appextra="recorder"
+    archosrom=""
+    flash=""
+    plugins="yes"
+    codecs="libmad liba52 libFLAC libTremor libwavpack dumb libmusepack"
+    ;;
+
+   11)
+    archos="h100"
+    target="-DIRIVER_H100"
+    memory=16 # always
+    coldfirecc
+    tool="$rootdir/tools/scramble -add=h100"
+    output="rockbox.iriver"
+    appextra="recorder"
+    archosrom=""
+    flash=""
+    plugins="yes"
+    codecs="libmad liba52 libFLAC libTremor libwavpack dumb libmusepack"
+    ;;
+
+   12)
+    archos="x5"
+    target="-DIAUDIO_X5"
+    memory=32 # always
+    coldfirecc
+    tool="$rootdir/tools/scramble -add=x5" # wrong, must be fixed
+    output="rockbox.iaudio"
+    appextra="recorder"
+    archosrom=""
+    flash=""
+    plugins="yes"
+    codecs="libmad liba52 libFLAC libTremor libwavpack dumb libmusepack"
+    ;;
+
+   *)
+    echo "Please select an actual target platform!"
+    exit
+    ;;
+
+  esac
+
+  echo "Platform set to $archos"
+
+
+############################################################################
+# Amount of memory, for those that can differ.
+#
+
+if [ -z "$memory" ]; then
+  size="2"
+  if [ -z "$update" ]; then
+    echo "Enter size of your RAM (in MB): (defaults to 2)"
+    size=`input`;
+  fi
+
+  case $size in
+   8)
+    memory="8"
+    ;;
+   *)
+    memory="2"
+    ;;
+
+  esac
+  echo "Memory size selected: $memory MB"
+fi
+
+##################################################################
+# Figure out build "type"
+#
+  echo ""
+  echo "Build (N)ormal, (D)evel, (S)imulator, (B)ootloader? (N)"
+
+  option=`input`;
+
+  case $option in
+    [Bb])
+      case $archos in
+          h100|h120)
+              extradefines="-DBOOTLOADER" # for target makefile symbol EXTRA_DEFINES
+              appsdir='\$(ROOTDIR)/bootloader'
+              apps="bootloader"
+              ;;
+          *)
+              extradefines="-DBOOTLOADER -ffunction-sections -fdata-sections"
+              appsdir='\$(ROOTDIR)/flash/bootbox'
+              apps="bootbox"
+              ;;
+      esac
+      bootloader="1"
+      echo "Bootloader build selected"
+      ;;
+    [Ss])
+      debug="-DDEBUG"
+      simulator="yes"
+      extradefines="-DSIMULATOR"
+      echo "Simulator build selected"
+      whichsim
+      ;;
+    [Dd])
+      echo "Devel build selected"
+      whichdevel
+      ;;
+    *)
+      debug=""
+      echo "Normal build selected"
+      GCCOPTS="$GCCOPTS $GCCOPTIMIZE"
+      ;;
+
+  esac
+
+
+whichaddr
+
+############################################################################
+# language
+
+    echo "Select a number for the language to use (default is english)"
+
+    picklang
+    language=`whichlang`
+
+    if [ -z "$language" ]; then
+        # pick a default
+        language="english"
+    fi
+    echo "Language set to $language"
+
+uname=`uname`
+
+if [ "yes" = "$simulator" ]; then
+  # setup compiler and things for simulator
+  simcc
+
+  if [ -d "archos" ]; then
+    echo "sub directory archos already present"
+  else
+    mkdir archos
+    echo "created an archos subdirectory for simulating the hard disk"
+  fi
+fi
+
+# Now, figure out version number of the (gcc) compiler we are about to use
+gccver=`$CC -dumpversion`;
+
+if [ -z "$gccver" ]; then
+  echo "WARNING: The compiler you must use ($CC) is not in your path!"
+  echo "WARNING: this may cause your build to fail since we cannot do the"
+  echo "WARNING: checks we want now."
+else
+
+  # gccver should now be "3.3.5", "3.4.3", "2.95.3-6" and similar, but don't
+  # DEPEND on it
+
+ num1=`echo $gccver | cut -d . -f1`
+ num2=`echo $gccver | cut -d . -f2`
+ gccnum=`(expr $num1 "*" 100 + $num2) 2>/dev/null`
+
+ # This makes:
+ # 3.3.X  => 303
+ # 3.4.X  => 304
+ # 2.95.3 => 295
+
+ echo "Using $CC $gccver ($gccnum)"
+
+ if test "$gccnum" -ge "400"; then 
+   # gcc 4.0 is just *so* much pickier on arguments that differ in signedness
+   # so we ignore that warnings for now
+   # -Wno-pointer-sign
+   GCCOPTS="$GCCOPTS -Wno-pointer-sign"
+ fi
+
+fi
+
+if test "X$ccache" = "Xyes"; then
+  CC="ccache $CC"
+fi
+
+if test "X$endian" = "Xbig"; then
+  defendian="ROCKBOX_BIG_ENDIAN"
+else
+  defendian="ROCKBOX_LITTLE_ENDIAN"
+fi
+
+sed > autoconf.h \
+ -e "s,@ENDIAN@,${defendian},g" \
+ -e "s,^#undef ROCKBOX_HAS_LOGF,$use_logf,g" \
+ -e "s,@SIMSOUND@,$use_simsound,g" \
+<<EOF
+/* This header was made by configure */
+#ifndef __BUILD_AUTOCONF_H
+#define __BUILD_AUTOCONF_H
+
+/* Define endianess for the target or simulator platform */
+#define @ENDIAN@ 1
+
+/* Define this if you build rockbox to support the logf logging and display */
+#undef ROCKBOX_HAS_LOGF
+
+/* Define this if you have the linux/soundcard.h header and thus can compile
+   the sound-playing code in the X11 sim */
+@SIMSOUND@
+
+#endif /* __BUILD_AUTOCONF_H */
+EOF
+
+if test "$simulator" = "yes"; then
+  # verify that we have a sed version we can use!
+  lines=`echo "moo" | sed -e '/moo/cline1\nline2\nline3' | wc -l`
+  if test "$lines" -eq "1"; then
+    echo "You have a broken sed version. You must upgrade to be able to "
+    echo "generate a fine Makefile. See details at:"
+    echo "http://www.rockbox.org/twiki/bin/view/Main/BrokenSed"
+    exit
+  else
+    version=`sed --version | head -n 1`
+    echo "$version is a fine sed"
+  fi
+
+  # add simul make stuff on the #SIMUL# line
+  simmagic='/#SIMUL#/c\	@$(MAKE) -C $(SIMDIR) OBJDIR=$(BUILDDIR)/sim\n	@$(MAKE) -C $(ROOTDIR)/uisimulator/common OBJDIR=$(BUILDDIR)/comsim'
+else
+  # delete the line that matches
+  simmagic='/#SIMUL#/D'
+fi
+
+sed > Makefile \
+ -e "s,@ROOTDIR@,${rootdir},g" \
+ -e "s,@DEBUG@,${debug},g" \
+ -e "s,@MEMORY@,${memory},g" \
+ -e "s,@TARGET@,${target},g" \
+ -e "s,@ARCHOS@,${archos},g" \
+ -e "s,@LANGUAGE@,${language},g" \
+ -e "s,@PWD@,${pwd},g" \
+ -e "s,@CC@,${CC},g" \
+ -e "s,@LD@,${LD},g" \
+ -e "s,@AR@,${AR},g" \
+ -e "s,@AS@,${AS},g" \
+ -e "s,@OC@,${OC},g" \
+ -e "s,@WINDRES@,${WINDRES},g" \
+ -e "s,@DLLTOOL@,${DLLTOOL},g" \
+ -e "s,@DLLWRAP@,${DLLWRAP},g" \
+ -e "s,@RANLIB@,${RANLIB},g" \
+ -e "s,@TOOL@,${tool},g" \
+ -e "s,@OUTPUT@,${output},g" \
+ -e "s,@APPEXTRA@,${appextra},g" \
+ -e "s,@ARCHOSROM@,${archosrom},g" \
+ -e "s,@FLASHFILE@,${flash},g" \
+ -e "s,@PLUGINS@,${plugins},g" \
+ -e "s,@CODECS@,${codecs},g" \
+ -e "s,@GCCOPTS@,${GCCOPTS},g" \
+ -e "s,@LDOPTS@,${LDOPTS},g" \
+ -e "s,@LOADADDRESS@,${loadaddress},g" \
+ -e "s,@EXTRADEF@,${extradefines},g" \
+ -e "s,@APPSDIR@,${appsdir},g" \
+ -e "s,@APPS@,${apps},g" \
+ -e "s,@SIMVER@,${simver},g" \
+ -e "s,@GCCVER@,${gccver},g" \
+ -e "s,@GCCNUM@,${gccnum},g" \
+ -e "s,@UNAME@,${uname},g" \
+ -e "s,@ENDIAN@,${defendian},g" \
+ -e "${simmagic}" \
+<<EOF
+## Automaticly generated. http://www.rockbox.org/
+
+export ROOTDIR=@ROOTDIR@
+export FIRMDIR=\$(ROOTDIR)/firmware
+export APPSDIR=@APPSDIR@
+export TOOLSDIR=\$(ROOTDIR)/tools
+export DOCSDIR=\$(ROOTDIR)/docs
+export DEBUG=@DEBUG@
+export ARCHOS=@ARCHOS@
+export ARCHOSROM=@ARCHOSROM@
+export FLASHFILE=@FLASHFILE@
+export TARGET=@TARGET@
+export OBJDIR=@PWD@
+export BUILDDIR=@PWD@
+export LANGUAGE=@LANGUAGE@
+export MEMORYSIZE=@MEMORY@
+export VERSION=\$(shell date +%y%m%d-%H%M)
+export BUILDDATE=\$(shell date +'-DYEAR=%Y -DMONTH=%m -DDAY=%d')
+export MKFIRMWARE=@TOOL@
+export BINARY=@OUTPUT@
+export APPEXTRA=@APPEXTRA@
+export ENABLEDPLUGINS=@PLUGINS@
+export SOFTWARECODECS=@CODECS@
+export EXTRA_DEFINES=@EXTRADEF@
+export CC=@CC@
+export LD=@LD@
+export AR=@AR@
+export AS=@AS@
+export OC=@OC@
+export WINDRES=@WINDRES@
+export DLLTOOL=@DLLTOOL@
+export DLLWRAP=@DLLWRAP@
+export RANLIB=@RANLIB@
+export GCCOPTS=@GCCOPTS@
+export LOADADDRESS=@LOADADDRESS@
+export SIMVER=@SIMVER@
+export SIMDIR=\$(ROOTDIR)/uisimulator/\$(SIMVER)
+export LDOPTS=@LDOPTS@
+export GCCVER=@GCCVER@
+export GCCNUM=@GCCNUM@
+export UNAME=@UNAME@
+
+# Do not print "Entering directory ..."
+MAKEFLAGS += --no-print-directory
+
+.PHONY: all clean tags zip
+
+all:
+#SIMUL#
+	@\$(MAKE) -C \$(FIRMDIR) OBJDIR=\$(BUILDDIR)/firmware
+	@\$(MAKE) -C \$(APPSDIR) OBJDIR=\$(BUILDDIR)/@APPS@
+
+clean:
+	@\$(MAKE) -C \$(FIRMDIR) clean OBJDIR=\$(BUILDDIR)/firmware
+	@\$(MAKE) -C \$(APPSDIR) clean OBJDIR=\$(BUILDDIR)/@APPS@
+	@rm -rf rockbox.zip TAGS @APPS@ firmware comsim sim lang.h
+
+tags:
+	@rm -f TAGS
+	\$(MAKE) -C \$(FIRMDIR) tags
+	\$(MAKE) -C \$(APPSDIR) tags
+	\$(MAKE) -C \$(APPSDIR)/plugins tags
+	\$(MAKE) -C \$(APPSDIR)/plugins/lib tags
+
+zip:
+	\$(TOOLSDIR)/buildzip.pl -r "\$(ROOTDIR)" \$(TARGET) \$(BINARY)
+EOF
+
+if [ "yes" = "$simulator" ]; then
+
+ cat >> Makefile <<EOF
+
+install:
+	@echo "installing a full setup in your archos dir"
+	@(make zip && cd archos && unzip -oq ../rockbox.zip)
+EOF
+
+fi
+
+echo "Created Makefile"

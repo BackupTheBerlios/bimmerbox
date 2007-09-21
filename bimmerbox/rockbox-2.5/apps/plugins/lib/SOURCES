@@ -1,0 +1,14 @@
+configfile.c
+highscore.c
+#if defined(HAVE_LCD_BITMAP) && (LCD_DEPTH < 4) && !defined(SIMULATOR)
+gray_core.c
+gray_draw.c
+gray_parm.c
+gray_scroll.c
+#endif
+#ifdef HAVE_LCD_BITMAP
+xlcd.c
+#endif
+#ifdef HAVE_LCD_CHARCELLS
+playergfx.c
+#endif
