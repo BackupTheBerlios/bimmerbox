@@ -4,7 +4,7 @@
 #   Jukebox    |    |   (  <_> )  \___|    < | \_\ (  <_> > <  <
 #   Firmware   |____|_  /\____/ \___  >__|_ \|___  /\____/__/\_ \
 #                     \/            \/     \/    \/            \/
-# $Id: Makefile,v 1.1 2007/09/21 18:43:36 duke4d Exp $
+# $Id: Makefile,v 1.2 2007/09/21 22:52:11 duke4d Exp $
 #
 
 INCLUDES= -I$(FIRMDIR)/include -I$(FIRMDIR)/export -I. -I$(BUILDDIR)	\
@@ -123,20 +123,20 @@ $(BUILDDIR)/$(BINARY) : $(OBJS) $(DEPFILE) $(BUILDDIR)/libsim.a \
 endif
 
 $(BUILDDIR)/rockbox.ucl: $(OBJDIR)/rockbox.bin
-	@a=`uclpack -h 2>/dev/null`; \
+	@a=`$(TOOLSDIR)/uclpack -h 2>/dev/null`; \
 	if test -n "$$a"; then \
 	  echo "UCLPACK rockbox" ; \
-	  uclpack --best --2e $< $@ >/dev/null 2>&1; \
+	  $(TOOLSDIR)/uclpack --best --2e $< $@ >/dev/null 2>&1; \
 	else \
 	  echo "no uclpack command found, makes a fake rockbox.ucl"; \
 	  echo "fake" > $@; \
 	fi
 
 $(BUILDDIR)/rombox.ucl: $(OBJDIR)/rombox.bin $(MAXOUTFILE)
-	@a=`uclpack -h 2>/dev/null`; \
+	@a=`$(TOOLSDIR)/uclpack -h 2>/dev/null`; \
 	if test -n "$$a"; then \
 	  echo "UCLPACK rombox" ; \
-	  uclpack --none $< $@ >/dev/null 2>&1; \
+	  $(TOOLSDIR)/uclpack --none $< $@ >/dev/null 2>&1; \
 	  if test -s $@; then \
 	    perl $(TOOLSDIR)/romsizetest.pl `cat $(MAXOUTFILE)` $<; \
 	    if test $$? -ne 0; then \
