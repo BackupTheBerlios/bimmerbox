@@ -5,7 +5,7 @@
  *   Jukebox    |    |   (  <_> )  \___|    < | \_\ (  <_> > <  <
  *   Firmware   |____|_  /\____/ \___  >__|_ \|___  /\____/__/\_ \
  *                     \/            \/     \/    \/            \/
- * $Id: main.c,v 1.1 2007/09/21 18:43:37 duke4d Exp $
+ * $Id: main.c,v 1.2 2007/09/21 22:53:24 duke4d Exp $
  *
  * Copyright (C) 2002 by Björn Stenberg
  *
@@ -86,9 +86,12 @@ const char appsversion[]=APPSVERSION;
 
 void init(void);
 
+void emu_main(void);
+
 void app_main(void)
 {
     init();
+    emu_main();
     browse_root();
 }
 

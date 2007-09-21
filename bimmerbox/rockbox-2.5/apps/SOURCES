@@ -58,3 +58,7 @@ dsp.c
 pcm_recording.c
 #endif
 #endif
+ibus.c
+ibus_cdc.c
+ibus_help.c
+IniFile.c 
