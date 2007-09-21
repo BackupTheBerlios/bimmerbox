@@ -76,6 +76,7 @@ const iniparams iniparm[] = {
 			{"MUTEHACK", INI_TYPE_BOOL, &gConf.bMuteHack, "0"},
 			{"MUTEONSKIP", INI_TYPE_BOOL, &gConf.bMuteOnSkip, "0"},
 			{"INTROTIME", INI_TYPE_INT, &gConf.iIntroTime, "10"},
+			{"DOUBLECLICKTIME", INI_TYPE_INT, &gConf.iDoubleClickTime, "4"},
 			{"SKIPDELAY", INI_TYPE_INT, &gConf.iSkipDelay, "2"},
 			{"IBUSIDLETIME", INI_TYPE_INT, &gConf.iIbusIdleTime, "300"},
 			{"ANNOUNCEPERIOD", INI_TYPE_INT, &gConf.iAnnouncePeriod, "10"},

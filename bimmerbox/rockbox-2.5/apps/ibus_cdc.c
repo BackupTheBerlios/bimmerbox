@@ -1,4 +1,7 @@
 /*
+   ibus_cdc.c
+  
+   $Id: ibus_cdc.c,v 1.2 2007/09/21 23:14:08 duke4d Exp $
 
 Release Notes:
 
@@ -22,7 +25,7 @@ TODO:	Split code into different files
 #define HIDIGIT(x)	(x&0XF0)
 
 // Current build version
-#define CDC_EMU_VERSION	"Ver: 1.22"
+#define CDC_EMU_VERSION	"Ver: 1.22dl1"
 
 char EmptyString63[]="                                                               ";
 
@@ -1005,7 +1008,7 @@ unsigned char emu_load_magazine(void)
 	int oTrack = gEmu.track;
 	gEmu.track = 0;
 
-	for(i=1; i<=6; i++) {
+	for(i=1; i<=CDC_MAGAZINE_CAPACITY; i++) {
 		unsigned char disc = i+gEmu.mag_idx*CDC_MAGAZINE_CAPACITY;
 		bool exists = emu_is_disc_ready(disc);
 		if(ret == 0 && exists) ret = disc;
@@ -1167,12 +1170,39 @@ static void id3_thread(void)
 						// Nothing to do...
 						id3Ctl.offset++;
 					}
-					else if((id3Ctl.offset == -2*gConf.iTicksPerSecond) || (id3Ctl.offset == id3Ctl.len) ||
-						    (id3Ctl.len <= id3Ctl.width)) {
+					else if((id3Ctl.offset == -2*gConf.iTicksPerSecond) || 
+						     (id3Ctl.offset == id3Ctl.len) ||
+						     (id3Ctl.len <= id3Ctl.width)) {
 						if(id3Ctl.offset == id3Ctl.len)	{ // We're through!
 							id3Ctl.scrolling = false;
 							if(id3Ctl.mode == ID3_DISPLAY_ALL)	
-								strcpy(id3Ctl.text, id3Ctl.title);
+							{
+								// check to see if time has passed at least one second
+								struct mp3entry *id3 = audio_current_track();
+			
+								if(!id3)
+							  {
+							  	// no id3 info found. using title.
+							  	// TODO: but how can we have id3Ctl.title in this case?
+								  strcpy(id3Ctl.text, id3Ctl.title);
+								}
+								else
+							  {
+							  	// to get the time display actualizing 
+							  	// we set scrolling to true.
+							  	id3Ctl.scrolling = true;
+							  	
+									int elapsed_seconds = id3->elapsed / 1000;				
+									if(elapsed_seconds == (int) id3Ctl.old_time) return;
+									id3Ctl.old_time = elapsed_seconds;
+				
+									int elapsed_minutes = elapsed_seconds/60;
+									elapsed_seconds = elapsed_seconds % 60;
+				
+									snprintf(id3Ctl.text, id3Ctl.width+1, "%02d:%02d %s", 
+									  elapsed_minutes, elapsed_seconds, id3Ctl.title);
+							  }
+							}
 						}
 						else id3Ctl.offset++;
 
@@ -1407,11 +1437,22 @@ WriteToDebug("\n", 2);
 
 			cdc_report_playstatus();
 
-			if((old_playstatus & SCAN_CODE) && (gEmu.intro_delay >= gConf.iIntroTime-2)) {
+			if((old_playstatus & SCAN_CODE) && 
+				(gEmu.intro_delay >= gConf.iIntroTime-gConf.iDoubleClickTime)) {
 				// This was quick enough.
-				// It means we are trying to select the next magazine
-				gEmu.mag_idx++;
-				emu_switch_magazine(true);
+				
+			  if(gConf.bSkipMagazine) {
+			  	// in SkipMagazine mode we are
+			  	// using this key for changing id3 mode
+			    id3_change_mode();
+			  }				
+			  else
+			  {
+			  	// in non SkipMagazine mode this double
+			  	// click means selection of next magazine
+  				gEmu.mag_idx++;
+	  			emu_switch_magazine(true);
+	  	  }
 			}
 			gEmu.intro_delay = gConf.iIntroTime;
 			lcd_puts_scroll(0,1,"RADIO: INTRO OFF");
@@ -2195,6 +2236,7 @@ void emu_main(void)
 	lcd_puts(0,0,"BimmerBox");
 	lcd_puts(0,1,CDC_EMU_VERSION);
 	sleep(2*HZ);
+	
 
 	if(gConf.iDebugLevel == 1)	lcd_puts(0,0,"BMW DEBUG=1");
 	else if(gConf.iDebugLevel == 2) lcd_puts(0,0,"BMW DEBUG=2");

@@ -6,6 +6,7 @@
 typedef struct {
 	int iDebugLevel;
 	int iIntroTime;
+	int iDoubleClickTime;
 	int iSkipDelay;
 	int iScrollSpeed;
 	int iScrollDelay;
