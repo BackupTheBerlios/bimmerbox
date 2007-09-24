@@ -79,7 +79,7 @@ const iniparams iniparm[] = {
 			{"DOUBLECLICKTIME", INI_TYPE_INT, &gConf.iDoubleClickTime, "4"},
 			{"SKIPDELAY", INI_TYPE_INT, &gConf.iSkipDelay, "2"},
 			{"IBUSIDLETIME", INI_TYPE_INT, &gConf.iIbusIdleTime, "300"},
-			{"ANNOUNCEPERIOD", INI_TYPE_INT, &gConf.iAnnouncePeriod, "10"},
+			{"ANNOUNCEPERIOD", INI_TYPE_INT, &gConf.iAnnouncePeriod, "0"},
 			{"LEADINGCHAR", INI_TYPE_INT, &gConf.iLeadingChar, "46"},
 			{"DISPLAYWIDTH", INI_TYPE_INT, &gConf.iDisplayWidth, "11"},
 			{"DISPLAYRAD", INI_TYPE_BOOL, &gConf.bDisplayRAD, "1"},

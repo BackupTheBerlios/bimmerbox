@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.3 2007/09/24 18:38:31 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.4 2007/09/24 22:32:07 duke4d Exp $
 
 Release Notes:
 
@@ -24,7 +24,7 @@ TODO:	Split code into different files
 #define HIDIGIT(x)	(x&0XF0)
 
 // Current build version
-#define CDC_EMU_VERSION	"Ver: 1.22dl2"
+#define CDC_EMU_VERSION	"Ver: 1.22d4"
 
 char EmptyString63[]="                                                               ";
 
@@ -711,6 +711,10 @@ void id3_set_info(void)
 	queue_post(&id3_queue, id3Ctl.mode, NULL);
 }
 
+/*
+ * shows playing mode (RAND, SCAN) in info area of
+ * nav display. Also "BimmerBox" is shown there
+ */
 void nav_display_info(void)
 {
 //	char txt[32];
@@ -734,6 +738,10 @@ void nav_display_info(void)
 	ibus_display_nav("");
 }
 
+/**
+ * shows elapsed minutes and seconds in the info area
+ * of nav display. Also BimmerBox is show there
+ */
 void nav_display_time(void)
 {
 	char txt[32];
@@ -757,6 +765,11 @@ void nav_display_time(void)
 	ibus_display_nav("BimmerBox");
 }
 
+/**
+ * shows the title line, artits, title, album,
+ * bit rate and total time in the index area of
+ * nav display
+ */
 void nav_display_index(void)
 {
 	char txt[32];
@@ -1200,6 +1213,8 @@ static void id3_thread(void)
 				
 									snprintf(id3Ctl.text, id3Ctl.width+1, "%02d:%02d %s", 
 									  elapsed_minutes, elapsed_seconds, id3Ctl.title);
+									  
+									nav_display_time ();
 							  }
 							}
 						}
@@ -1340,11 +1355,16 @@ WriteToDebug("\n", 2);
 
 //				if(LOWDIGIT(old_playstatus) == STOP_CODE || LOWDIGIT(old_playstatus) == IDLE_CODE) {
 
-					//ibus_display("BimmerBox");
-					//sleep(HZ/2);
-					//ibus_display(CDC_EMU_VERSION);
-					//sleep(HZ/2);
-					//ibus_display("(c) F.Birra");
+					ibus_display("BimmerBox");
+					sleep(HZ/3);
+					ibus_display(CDC_EMU_VERSION);
+					sleep(HZ/3);
+					ibus_display("(c) F.Birra");
+					sleep(HZ/3);
+					ibus_display("Modified by");
+					sleep(HZ/3);
+					ibus_display("D. Lusiewicz");
+					sleep(HZ/2);
 
 
 					sound_set(SOUND_VOLUME, global_settings.volume);
@@ -1510,7 +1530,7 @@ WriteToDebug("\n", 2);
 			gEmu.skip_counter = gConf.iSkipDelay;
 			gEmu.intro_delay = gConf.iIntroTime;
 			if(gConf.bMuteHack) cdc_status_track_starting();
-			//setup_index_update(false, HZ);
+			setup_index_update(false, HZ*2);
 			lcd_puts_scroll(0,1,"RADIO: NEXT");
 			break;
 
@@ -1535,7 +1555,7 @@ WriteToDebug("\n", 2);
 
 			gEmu.skip_counter = gConf.iSkipDelay;
 			gEmu.intro_delay = gConf.iIntroTime;
-			//setup_index_update(false, HZ);
+			setup_index_update(false, HZ*2);
 
 			cdc_status_track_seeking();
 			if(gConf.bMuteHack) cdc_status_track_starting();
@@ -1593,7 +1613,7 @@ WriteToDebug("\n", 2);
 			// the navCtl.index will be true and we need to set the time
 			if(navCtl.index) {
 				if(navCtl.index_time == (unsigned long) -1) 
-					setup_index_update(false, HZ/5);
+					setup_index_update(false, HZ);
 			}
 			else {
 			// otherwise we clear the navCtl.index flag and wait until we get another chance
@@ -1621,7 +1641,7 @@ WriteToDebug("\n", 2);
 			cdc_status_track_starting();
 			id3_set_info();
 			if(navCtl.waitForId3) {
-				setup_index_update(true, 0);
+				setup_index_update(true, HZ);
 				//navCtl.waitForId3 = false;
 			}
 			lcd_puts_scroll(0,1,"Started a new track");
@@ -1775,12 +1795,14 @@ void emu_tick(void)
 	}
 	
 
-	// Check if it is time to send an announce message
-	if(gEmu.announce_delay--==0) {
-		// if(gEmu.playstatus != EMU_PLAYING) {
-			cdc_announce();
-		// }
-		gEmu.announce_delay = gConf.iAnnouncePeriod;
+  if(gConf.iAnnouncePeriod){
+	  // Check if it is time to send an announce message
+	  if(gEmu.announce_delay--==0) {
+		  // if(gEmu.playstatus != EMU_PLAYING) {
+			  cdc_announce();
+		  // }
+		  gEmu.announce_delay = gConf.iAnnouncePeriod;
+	  }
 	}
 
 
