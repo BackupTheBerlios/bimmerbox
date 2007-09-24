@@ -1,7 +1,6 @@
 /*
-   ibus_cdc.c
-  
-   $Id: ibus_cdc.c,v 1.2 2007/09/21 23:14:08 duke4d Exp $
+
+  $Id: ibus_cdc.c,v 1.3 2007/09/24 18:38:31 duke4d Exp $
 
 Release Notes:
 
@@ -25,7 +24,7 @@ TODO:	Split code into different files
 #define HIDIGIT(x)	(x&0XF0)
 
 // Current build version
-#define CDC_EMU_VERSION	"Ver: 1.22dl1"
+#define CDC_EMU_VERSION	"Ver: 1.22dl2"
 
 char EmptyString63[]="                                                               ";
 
@@ -1777,13 +1776,13 @@ void emu_tick(void)
 	
 
 	// Check if it is time to send an announce message
-/*	if(gEmu.announce_delay--==0) {
-		if(gEmu.playstatus != EMU_PLAYING) {
+	if(gEmu.announce_delay--==0) {
+		// if(gEmu.playstatus != EMU_PLAYING) {
 			cdc_announce();
-		}
+		// }
 		gEmu.announce_delay = gConf.iAnnouncePeriod;
 	}
-*/
+
 
 	// If we are in INTRO mode then we need to check if it is time to skip to the next song
 	if(gEmu.status.playstatus & SCAN_CODE) {
