@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.6 2007/09/25 16:12:42 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.7 2007/09/25 20:54:17 duke4d Exp $
 
 Release Notes:
 
@@ -24,7 +24,7 @@ TODO:	Split code into different files
 #define HIDIGIT(x)	(x&0XF0)
 
 // Current build version
-#define CDC_EMU_VERSION	"Ver: 1.22d5"
+#define CDC_EMU_VERSION	"Ver: 1.22d6"
 
 char EmptyString63[]="                                                               ";
 
@@ -1377,12 +1377,12 @@ WriteToDebug("\n", 2);
 
 //				if(LOWDIGIT(old_playstatus) == STOP_CODE || LOWDIGIT(old_playstatus) == IDLE_CODE) {
 
-					ibus_display("BimmerBox");
-					sleep(HZ/2);
-					ibus_display(CDC_EMU_VERSION);
-					sleep(HZ/2);
-					ibus_display("(c) F.Birra");
-					sleep(HZ/2);
+					//ibus_display("BimmerBox");
+					//sleep(HZ/2);
+					//ibus_display(CDC_EMU_VERSION);
+					//sleep(HZ/2);
+					//ibus_display("(c) F.Birra");
+					//sleep(HZ/2);
 
 
 					sound_set(SOUND_VOLUME, global_settings.volume);
@@ -1548,7 +1548,7 @@ WriteToDebug("\n", 2);
 			gEmu.skip_counter = gConf.iSkipDelay;
 			gEmu.intro_delay = gConf.iIntroTime;
 			if(gConf.bMuteHack) cdc_status_track_starting();
-			setup_index_update(false, HZ*2);
+			//setup_index_update(false, HZ);
 			lcd_puts_scroll(0,1,"RADIO: NEXT");
 			break;
 
@@ -1573,7 +1573,7 @@ WriteToDebug("\n", 2);
 
 			gEmu.skip_counter = gConf.iSkipDelay;
 			gEmu.intro_delay = gConf.iIntroTime;
-			setup_index_update(false, HZ*2);
+			//setup_index_update(false, HZ);
 
 			cdc_status_track_seeking();
 			if(gConf.bMuteHack) cdc_status_track_starting();
@@ -1631,7 +1631,7 @@ WriteToDebug("\n", 2);
 			// the navCtl.index will be true and we need to set the time
 			if(navCtl.index) {
 				if(navCtl.index_time == (unsigned long) -1) 
-					setup_index_update(false, HZ);
+					setup_index_update(false, HZ/5);
 			}
 			else {
 			// otherwise we clear the navCtl.index flag and wait until we get another chance
@@ -1659,7 +1659,7 @@ WriteToDebug("\n", 2);
 			cdc_status_track_starting();
 			id3_set_info();
 			if(navCtl.waitForId3) {
-				setup_index_update(true, HZ);
+				setup_index_update(true, 0);
 				//navCtl.waitForId3 = false;
 			}
 			lcd_puts_scroll(0,1,"Started a new track");
