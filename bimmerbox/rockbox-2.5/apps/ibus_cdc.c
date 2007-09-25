@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.4 2007/09/24 22:32:07 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.5 2007/09/25 07:59:32 duke4d Exp $
 
 Release Notes:
 
@@ -1356,14 +1356,10 @@ WriteToDebug("\n", 2);
 //				if(LOWDIGIT(old_playstatus) == STOP_CODE || LOWDIGIT(old_playstatus) == IDLE_CODE) {
 
 					ibus_display("BimmerBox");
-					sleep(HZ/3);
+					sleep(HZ/2);
 					ibus_display(CDC_EMU_VERSION);
-					sleep(HZ/3);
+					sleep(HZ/2);
 					ibus_display("(c) F.Birra");
-					sleep(HZ/3);
-					ibus_display("Modified by");
-					sleep(HZ/3);
-					ibus_display("D. Lusiewicz");
 					sleep(HZ/2);
 
 
