@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.5 2007/09/25 07:59:32 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.6 2007/09/25 16:12:42 duke4d Exp $
 
 Release Notes:
 
@@ -24,7 +24,7 @@ TODO:	Split code into different files
 #define HIDIGIT(x)	(x&0XF0)
 
 // Current build version
-#define CDC_EMU_VERSION	"Ver: 1.22d4"
+#define CDC_EMU_VERSION	"Ver: 1.22d5"
 
 char EmptyString63[]="                                                               ";
 
@@ -1009,6 +1009,24 @@ bool emu_is_disc_ready(int i)
 	return hlp_file_exists(fullname);
 }
 
+/**
+ * checks if for given magazine index exists an description
+ * file (/BMW/DISC1.txt for first magazine, /BMW/DISC7.txt for second magazine, ...)
+ * and displays the content of this file on BMW display
+ */
+void display_magazine_name(void)
+{
+	char fullname[32];
+	unsigned char disc = gEmu.mag_idx*CDC_MAGAZINE_CAPACITY + 1;
+	snprintf(fullname, sizeof(fullname), "/BMW/DISC%d.txt", disc);
+	int fd = open(fullname, O_RDONLY);
+	if( fd < 0 ) return;
+  char description[20];
+  read (fd, description, sizeof(description));		
+	close(fd);
+	ibus_display(description);
+}
+
 
 // returns the index of the first disc found in the current magazine
 unsigned char emu_load_magazine(void)
@@ -1046,7 +1064,11 @@ void emu_switch_magazine(bool jump)
 	}
 
 	if(jump) emu_jump_to_disc(first_disc);
+		
+	display_magazine_name();	
 }
+
+
 
 void nav_init(void)
 {
