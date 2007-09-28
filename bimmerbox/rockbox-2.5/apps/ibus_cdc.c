@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.11 2007/09/28 21:04:35 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.12 2007/09/28 21:37:36 duke4d Exp $
 
 Release Notes:
 
@@ -1829,8 +1829,8 @@ void emu_tick(void)
 	char ttt[32];
 
 	if(idle_time < gConf.iIbusIdleTime){
-		snprintf(ttt,32,"idle %02d", gConf.iIbusIdleTime-idle_time);
-		lcd_puts_scroll(0,1,ttt);
+		// snprintf(ttt,32,"idle %02d", gConf.iIbusIdleTime-idle_time);
+		// lcd_puts_scroll(0,1,ttt);
 		idle_time++;
 	}
 	else if(idle_time == gConf.iIbusIdleTime) {
