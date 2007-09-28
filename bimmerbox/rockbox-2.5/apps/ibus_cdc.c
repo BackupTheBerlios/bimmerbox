@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.8 2007/09/28 19:58:20 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.9 2007/09/28 19:59:49 duke4d Exp $
 
 Release Notes:
 
@@ -768,7 +768,8 @@ void nav_display_time(void)
 
 /**
  * shows the title line, artits, title, album,
- * bit rate and total time in the index area of
+ * bit rate, total time and magazine name
+ * in the index area of
  * nav display
  */
 void nav_display_index(void)
@@ -782,7 +783,9 @@ void nav_display_index(void)
 	radio_write_to_index(3, id3Ctl.album);
 	//radio_write_to_index(4, CDC_EMU_VERSION);
 	//radio_write_to_index(4, "You owe me a beer Stefan!!! Ah! Ah! Ah!");
-	radio_write_to_index(4, EmptyString63);
+	
+	snprintf(txt, sizeof(txt), "%s", id3Ctl.magazine);
+	radio_write_to_index(4, txt);
 
 	struct mp3entry *id3 = audio_current_track();
 
