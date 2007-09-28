@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.10 2007/09/28 20:16:23 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.11 2007/09/28 21:04:35 duke4d Exp $
 
 Release Notes:
 
@@ -24,7 +24,7 @@ TODO:	Split code into different files
 #define HIDIGIT(x)	(x&0XF0)
 
 // Current build version
-#define CDC_EMU_VERSION	"Ver: 1.22d7"
+#define CDC_EMU_VERSION	"Ver: 1.22d8"
 
 char EmptyString63[]="                                                               ";
 
@@ -759,11 +759,15 @@ void nav_display_time(void)
 	int elapsed_minutes = elapsed_seconds/60;
 	elapsed_seconds = elapsed_seconds % 60;
 
-	snprintf(txt, sizeof(txt), "%3d:%02d", elapsed_minutes, elapsed_seconds);
+	int totaltime = id3->length/1000;
+
+	snprintf(txt, sizeof(txt), "%3d:%02d/%3d:%02d %d KBPS", 
+	  elapsed_minutes, elapsed_seconds, 
+	  totaltime/60, totaltime%60, id3->bitrate);
 
 	radio_write_to_area(5, txt);
 
-	ibus_display_nav("BimmerBox");
+	radio_refresh_index_area();
 }
 
 /**
@@ -790,8 +794,19 @@ void nav_display_index(void)
 
 	if(!id3) radio_write_to_index(5,"");
 	else {
+		int elapsed_seconds = id3->elapsed / 1000;
+		if(elapsed_seconds != (int) id3Ctl.old_time) 
+  		id3Ctl.old_time = elapsed_seconds;
+	
+		int elapsed_minutes = elapsed_seconds/60;
+		elapsed_seconds = elapsed_seconds % 60;
+	
 		int totaltime = id3->length/1000;
-		snprintf(txt, sizeof(txt), "%3d:%02d %d KBPS", totaltime/60, totaltime%60, id3->bitrate);
+	
+		snprintf(txt, sizeof(txt), "%3d:%02d/%3d:%02d %d KBPS", 
+	    elapsed_minutes, elapsed_seconds, 
+	    totaltime/60, totaltime%60, id3->bitrate);
+
 		radio_write_to_index(5, txt);
 	}
 
@@ -1015,9 +1030,9 @@ bool emu_is_disc_ready(int i)
 /**
  * checks if for given magazine index exists an description
  * file (/BMW/DISC1.txt for first magazine, /BMW/DISC7.txt for second magazine, ...)
- * and displays the content of this file on BMW display
+ * and stores the content of this file for displaying on BMW nav display
  */
-void display_magazine_name(void)
+void load_magazine_name(void)
 {
 	char fullname[32];
   char description[20]="                    ";
@@ -1075,7 +1090,7 @@ void emu_switch_magazine(bool jump)
 
 	if(jump) emu_jump_to_disc(first_disc);
 		
-	display_magazine_name();	
+	load_magazine_name();	
 }
 
 
