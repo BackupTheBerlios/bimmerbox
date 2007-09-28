@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.12 2007/09/28 21:37:36 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.13 2007/09/28 21:50:23 duke4d Exp $
 
 Release Notes:
 
@@ -1826,7 +1826,7 @@ void emu_fast_tick(void)
 // This function gets called every second or so for housekeeping tasks
 void emu_tick(void)
 {
-	char ttt[32];
+	// char ttt[32];
 
 	if(idle_time < gConf.iIbusIdleTime){
 		// snprintf(ttt,32,"idle %02d", gConf.iIbusIdleTime-idle_time);
@@ -2422,14 +2422,14 @@ void emu_main(void)
 
 		if(gConf.bDisplayNAV) {
 
-			if(current_tick > navCtl.display_time) {
+			if((unsigned long)current_tick > navCtl.display_time) {
 				navCtl.display_time = (unsigned long) -1;
 				if(navCtl.display) {
 					nav_display_info();
 				}
 			}
 
-			if(current_tick > navCtl.index_time) {
+			if((unsigned long)current_tick > navCtl.index_time) {
 				if(navCtl.index) {
 					nav_display_index();
 				}
