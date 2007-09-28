@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.9 2007/09/28 19:59:49 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.10 2007/09/28 20:16:23 duke4d Exp $
 
 Release Notes:
 
@@ -24,7 +24,7 @@ TODO:	Split code into different files
 #define HIDIGIT(x)	(x&0XF0)
 
 // Current build version
-#define CDC_EMU_VERSION	"Ver: 1.22d6"
+#define CDC_EMU_VERSION	"Ver: 1.22d7"
 
 char EmptyString63[]="                                                               ";
 
@@ -784,8 +784,7 @@ void nav_display_index(void)
 	//radio_write_to_index(4, CDC_EMU_VERSION);
 	//radio_write_to_index(4, "You owe me a beer Stefan!!! Ah! Ah! Ah!");
 	
-	snprintf(txt, sizeof(txt), "%s", id3Ctl.magazine);
-	radio_write_to_index(4, txt);
+	radio_write_to_index(4, id3Ctl.magazine);
 
 	struct mp3entry *id3 = audio_current_track();
 
