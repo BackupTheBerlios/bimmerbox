@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.7 2007/09/25 20:54:17 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.8 2007/09/28 19:58:20 duke4d Exp $
 
 Release Notes:
 
@@ -430,6 +430,7 @@ unsigned char ibus_msg_request_date[]			  = {0x41, 0x02, 0x01};
 struct {
 	bool scrolling;
 	int mode;
+	char magazine[20];
 	char title[64];
 	char artist[64];
 	char album[64];
@@ -1017,14 +1018,21 @@ bool emu_is_disc_ready(int i)
 void display_magazine_name(void)
 {
 	char fullname[32];
+  char description[20]="                    ";
+  // emptying the previous magazine name
+	strncpy(id3Ctl.magazine, description, 20);
+	
+	// name of magazine description is /BMW/DISC1.txt, DISC7.txt, ...
 	unsigned char disc = gEmu.mag_idx*CDC_MAGAZINE_CAPACITY + 1;
 	snprintf(fullname, sizeof(fullname), "/BMW/DISC%d.txt", disc);
+	
 	int fd = open(fullname, O_RDONLY);
 	if( fd < 0 ) return;
-  char description[20];
+  // reading 20 characters
   read (fd, description, sizeof(description));		
 	close(fd);
-	ibus_display(description);
+	// ibus_display(description);
+	strncpy(id3Ctl.magazine, description, 20);
 }
 
 
@@ -1082,6 +1090,7 @@ void nav_init(void)
 void id3_init(void)
 {
 	id3Ctl.scrolling = false;
+	strcpy(id3Ctl.magazine, "");
 	strcpy(id3Ctl.title, "");
 	strcpy(id3Ctl.artist, "");
 	strcpy(id3Ctl.album, "");
