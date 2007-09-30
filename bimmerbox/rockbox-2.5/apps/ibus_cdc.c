@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.13 2007/09/28 21:50:23 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.14 2007/09/30 21:24:42 duke4d Exp $
 
 Release Notes:
 
@@ -24,7 +24,7 @@ TODO:	Split code into different files
 #define HIDIGIT(x)	(x&0XF0)
 
 // Current build version
-#define CDC_EMU_VERSION	"Ver: 1.22d8"
+#define CDC_EMU_VERSION	"Ver: 1.22d9"
 
 char EmptyString63[]="                                                               ";
 
@@ -1428,6 +1428,45 @@ WriteToDebug("\n", 2);
 
 		case RX_PKT_FWD:
 
+			if (gConf.bSeekOnPause)
+			{
+				// in pause state we seek
+				if (gEmu.paused)
+				{
+					struct mp3entry *id3 = audio_current_track();
+					if(!id3) break;
+
+					// seeking SEEKSECONDS forward
+					if (gEmu.offset + gConf.iSeekSeconds * 1000 < (int)id3->length)
+					{
+					  gEmu.offset = gEmu.offset + gConf.iSeekSeconds * 1000;
+					  
+						playlist_start(gEmu.track,gEmu.offset);
+						audio_pause();
+						
+						// showing new time on displays
+	          id3 = audio_current_track();
+						if(!id3) break;
+	
+						int elapsed_seconds = id3->elapsed / 1000;
+						id3Ctl.old_time = elapsed_seconds;
+	
+						int elapsed_minutes = elapsed_seconds/60;
+						elapsed_seconds = elapsed_seconds % 60;
+	
+						int total_seconds = id3->length / 1000;
+						int total_minutes = total_seconds / 60;
+						total_seconds = total_seconds % 60;
+	
+						snprintf(id3Ctl.text, id3Ctl.width+1, "%02d:%02d-%02d:%02d", 
+						  elapsed_minutes, elapsed_seconds, total_minutes, total_seconds);
+						ibus_display(id3Ctl.text);
+					}
+						
+					break;
+				}
+			}
+
 			if(gConf.bMuteOnSkip) {
 				sound_set(SOUND_VOLUME, 0);
 				audio_pause();
@@ -1449,6 +1488,40 @@ WriteToDebug("\n", 2);
 			break;
 
 		case RX_PKT_REW:
+			
+			if (gConf.bSeekOnPause)
+			{
+				// in pause state we seek
+				if (gEmu.paused)
+				{
+					if (gEmu.offset > gConf.iSeekSeconds * 1000)
+					{
+					  gEmu.offset = gEmu.offset - gConf.iSeekSeconds * 1000;
+					  
+						playlist_start(gEmu.track,gEmu.offset);
+						audio_pause();
+						
+						// showing new time on displays
+	          id3 = audio_current_track();
+						if(!id3) break;
+	
+						int elapsed_seconds = id3->elapsed / 1000;
+						id3Ctl.old_time = elapsed_seconds;
+	
+						int elapsed_minutes = elapsed_seconds/60;
+						elapsed_seconds = elapsed_seconds % 60;
+	
+						int total_seconds = id3->length / 1000;
+						int total_minutes = total_seconds / 60;
+						total_seconds = total_seconds % 60;
+	
+						snprintf(id3Ctl.text, id3Ctl.width+1, "%02d:%02d-%02d:%02d", 
+						  elapsed_minutes, elapsed_seconds, total_minutes, total_seconds);
+						ibus_display(id3Ctl.text);
+					}
+					break;
+				}
+			}
 
 			if(gConf.bMuteOnSkip) {
 				sound_set(SOUND_VOLUME, 0);

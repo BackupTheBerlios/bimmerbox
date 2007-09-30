@@ -15,6 +15,8 @@ typedef struct {
 	int iIbusIdleTime;
 	int iTicksPerSecond;
 	int iLeadingChar;
+	int iSeekSeconds;
+	bool bSeekOnPause;
 	bool bAlternateChanger;
 	bool bAlternateStatus;
 //	bool bAlternateStart;
