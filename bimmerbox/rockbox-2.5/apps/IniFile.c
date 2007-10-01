@@ -97,7 +97,7 @@ const iniparams iniparm[] = {
 			{"STATUSFIRST", INI_TYPE_BOOL, &gConf.bStatusFirst, "0"},
 			{"TITLELINE", INI_TYPE_STR, &gConf.sTitleLine, "--- Now Playing: ---"},
 			{"SEEKSECONDS", INI_TYPE_STR, &gConf.iSeekSeconds, "60"},
-			{"SEEKONPAUSE", INI_TYPE_BOOL, &gConf.bSeekOnPause, "1"},
+			{"SEEKONPLAY", INI_TYPE_BOOL, &gConf.bSeekOnPlay, "1"},
 			{"",INI_TYPE_EOL,NULL,""}};
 ////////// END BLOCK
 

@@ -16,7 +16,7 @@ typedef struct {
 	int iTicksPerSecond;
 	int iLeadingChar;
 	int iSeekSeconds;
-	bool bSeekOnPause;
+	bool bSeekOnPlay;
 	bool bAlternateChanger;
 	bool bAlternateStatus;
 //	bool bAlternateStart;

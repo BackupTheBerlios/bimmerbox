@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.14 2007/09/30 21:24:42 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.15 2007/10/01 12:16:39 duke4d Exp $
 
 Release Notes:
 
@@ -24,7 +24,7 @@ TODO:	Split code into different files
 #define HIDIGIT(x)	(x&0XF0)
 
 // Current build version
-#define CDC_EMU_VERSION	"Ver: 1.22d9"
+#define CDC_EMU_VERSION	"Ver: 1.22dC"
 
 char EmptyString63[]="                                                               ";
 
@@ -1428,119 +1428,176 @@ WriteToDebug("\n", 2);
 
 		case RX_PKT_FWD:
 
-			if (gConf.bSeekOnPause)
+			lcd_puts_scroll(0,1,"RADIO: FWD");
+			if (gConf.bSeekOnPlay)
 			{
 				// in pause state we seek
-				if (gEmu.paused)
+				if (!gEmu.paused)
 				{
-					struct mp3entry *id3 = audio_current_track();
-					if(!id3) break;
-
-					// seeking SEEKSECONDS forward
-					if (gEmu.offset + gConf.iSeekSeconds * 1000 < (int)id3->length)
-					{
+//					struct mp3entry *id3 = audio_current_track();
+//					if(!id3) break;
+//
+//					// seeking SEEKSECONDS forward
+//					if (gEmu.offset + gConf.iSeekSeconds * 1000 < (int)id3->length)
+//					{
 					  gEmu.offset = gEmu.offset + gConf.iSeekSeconds * 1000;
-					  
+//					  
 						playlist_start(gEmu.track,gEmu.offset);
+						
+//						
+//						// showing new time on displays
+//	          id3 = audio_current_track();
+//						if(!id3) break;
+//	
+//						int elapsed_seconds = id3->elapsed / 1000;
+//						id3Ctl.old_time = elapsed_seconds;
+//	
+//						int elapsed_minutes = elapsed_seconds/60;
+//						elapsed_seconds = elapsed_seconds % 60;
+//	
+//						int total_seconds = id3->length / 1000;
+//						int total_minutes = total_seconds / 60;
+//						total_seconds = total_seconds % 60;
+//	
+//						snprintf(id3Ctl.text, id3Ctl.width+1, "%02d:%02d-%02d:%02d", 
+//						  elapsed_minutes, elapsed_seconds, total_minutes, total_seconds);
+//						ibus_display(id3Ctl.text);
+// 					}
+						
+					break;
+				}
+				else // if (!gEmu.paused)
+			  {
+					// in pause state we skip magazine or skip 10 tracks
+					if(gConf.bMuteOnSkip) {
+						sound_set(SOUND_VOLUME, 0);
 						audio_pause();
-						
-						// showing new time on displays
-	          id3 = audio_current_track();
-						if(!id3) break;
-	
-						int elapsed_seconds = id3->elapsed / 1000;
-						id3Ctl.old_time = elapsed_seconds;
-	
-						int elapsed_minutes = elapsed_seconds/60;
-						elapsed_seconds = elapsed_seconds % 60;
-	
-						int total_seconds = id3->length / 1000;
-						int total_minutes = total_seconds / 60;
-						total_seconds = total_seconds % 60;
-	
-						snprintf(id3Ctl.text, id3Ctl.width+1, "%02d:%02d-%02d:%02d", 
-						  elapsed_minutes, elapsed_seconds, total_minutes, total_seconds);
-						ibus_display(id3Ctl.text);
 					}
-						
+		
+					id3_disable();
+		
+					if(gConf.bSkipMagazine) {
+						gEmu.mag_idx++;
+						emu_switch_magazine(true);
+					}
+					else {
+						gEmu.track+=10;
+						if(gEmu.track > playlist_amount()) gEmu.track = 0;
+						gEmu.skip_counter = gConf.iSkipDelay;
+						cdc_status_track_seeking();
+					}
+					// lcd_puts_scroll(0,1,"RADIO: FWD");
 					break;
 				}
 			}
 
-			if(gConf.bMuteOnSkip) {
-				sound_set(SOUND_VOLUME, 0);
-				audio_pause();
-			}
-
-			id3_disable();
-
-			if(gConf.bSkipMagazine) {
-				gEmu.mag_idx++;
-				emu_switch_magazine(true);
-			}
-			else {
-				gEmu.track+=10;
-				if(gEmu.track > playlist_amount()) gEmu.track = 0;
-				gEmu.skip_counter = gConf.iSkipDelay;
-				cdc_status_track_seeking();
-			}
-			lcd_puts_scroll(0,1,"RADIO: FWD");
-			break;
+			else // if (gConf.bSeekOnPlay)
+		  {
+				// no seek activated
+				if(gConf.bMuteOnSkip) {
+					sound_set(SOUND_VOLUME, 0);
+					audio_pause();
+				}
+	
+				id3_disable();
+	
+				if(gConf.bSkipMagazine) {
+					gEmu.mag_idx++;
+					emu_switch_magazine(true);
+				}
+				else {
+					gEmu.track+=10;
+					if(gEmu.track > playlist_amount()) gEmu.track = 0;
+					gEmu.skip_counter = gConf.iSkipDelay;
+					cdc_status_track_seeking();
+				}
+				// lcd_puts_scroll(0,1,"RADIO: FWD");
+				break;
+		  }
 
 		case RX_PKT_REW:
 			
-			if (gConf.bSeekOnPause)
+			lcd_puts_scroll(0,1,"RADIO: REW");
+			if (gConf.bSeekOnPlay)
 			{
-				// in pause state we seek
-				if (gEmu.paused)
+				// in play state we seek
+				if (!gEmu.paused)
 				{
-					if (gEmu.offset > gConf.iSeekSeconds * 1000)
-					{
+//					if (gEmu.offset > gConf.iSeekSeconds * 1000)
+//					{
 					  gEmu.offset = gEmu.offset - gConf.iSeekSeconds * 1000;
-					  
+					  if (gEmu.offset < 0)
+					  	gEmu.offset = 0;
+//					  
 						playlist_start(gEmu.track,gEmu.offset);
-						audio_pause();
 						
-						// showing new time on displays
-	          id3 = audio_current_track();
-						if(!id3) break;
-	
-						int elapsed_seconds = id3->elapsed / 1000;
-						id3Ctl.old_time = elapsed_seconds;
-	
-						int elapsed_minutes = elapsed_seconds/60;
-						elapsed_seconds = elapsed_seconds % 60;
-	
-						int total_seconds = id3->length / 1000;
-						int total_minutes = total_seconds / 60;
-						total_seconds = total_seconds % 60;
-	
-						snprintf(id3Ctl.text, id3Ctl.width+1, "%02d:%02d-%02d:%02d", 
-						  elapsed_minutes, elapsed_seconds, total_minutes, total_seconds);
-						ibus_display(id3Ctl.text);
+//						
+//						// showing new time on displays
+//	          id3 = audio_current_track();
+//						if(!id3) break;
+//	
+//						int elapsed_seconds = id3->elapsed / 1000;
+//						id3Ctl.old_time = elapsed_seconds;
+//	
+//						int elapsed_minutes = elapsed_seconds/60;
+//						elapsed_seconds = elapsed_seconds % 60;
+//	
+//						int total_seconds = id3->length / 1000;
+//						int total_minutes = total_seconds / 60;
+//						total_seconds = total_seconds % 60;
+//	
+//						snprintf(id3Ctl.text, id3Ctl.width+1, "%02d:%02d-%02d:%02d", 
+//						  elapsed_minutes, elapsed_seconds, total_minutes, total_seconds);
+//						ibus_display(id3Ctl.text);
+//					}
+					break;
+				}
+				else // if (!gEmu.paused)
+				{
+					// in pause state we skip magazine or skip 10 tracks
+					if(gConf.bMuteOnSkip) {
+						sound_set(SOUND_VOLUME, 0);
+						audio_pause();
 					}
+		
+					id3_disable();
+					if(gConf.bSkipMagazine) {
+						gEmu.mag_idx = MAX(gEmu.mag_idx-1,0);
+						emu_switch_magazine(true);
+					}
+					else {
+						gEmu.track-=10;
+						if(gEmu.track <= 0) gEmu.track = playlist_amount()-1;
+						gEmu.skip_counter = gConf.iSkipDelay;
+						cdc_status_track_seeking();
+					}
+					lcd_puts_scroll(0,1,"RADIO: REW");
 					break;
 				}
 			}
 
-			if(gConf.bMuteOnSkip) {
-				sound_set(SOUND_VOLUME, 0);
-				audio_pause();
+			else // if (gConf.bSeekOnPlay)
+			{
+				// no seek activated
+				if(gConf.bMuteOnSkip) {
+					sound_set(SOUND_VOLUME, 0);
+					audio_pause();
+				}
+	
+				id3_disable();
+				if(gConf.bSkipMagazine) {
+					gEmu.mag_idx = MAX(gEmu.mag_idx-1,0);
+					emu_switch_magazine(true);
+				}
+				else {
+					gEmu.track-=10;
+					if(gEmu.track <= 0) gEmu.track = playlist_amount()-1;
+					gEmu.skip_counter = gConf.iSkipDelay;
+					cdc_status_track_seeking();
+				}
+				lcd_puts_scroll(0,1,"RADIO: REW");
+				break;
 			}
-
-			id3_disable();
-			if(gConf.bSkipMagazine) {
-				gEmu.mag_idx = MAX(gEmu.mag_idx-1,0);
-				emu_switch_magazine(true);
-			}
-			else {
-				gEmu.track-=10;
-				if(gEmu.track <= 0) gEmu.track = playlist_amount()-1;
-				gEmu.skip_counter = gConf.iSkipDelay;
-				cdc_status_track_seeking();
-			}
-			lcd_puts_scroll(0,1,"RADIO: REW");
-			break;
 
 		case RX_PKT_CHANGE_CD:
 
@@ -1709,6 +1766,7 @@ WriteToDebug("\n", 2);
 			break;
 
 		case RX_PKT_NAV_REVERSE_PRESS:
+			lcd_puts_scroll(0,1,"NAV: REVERSE");
 			if(LOWDIGIT(gEmu.status.playstatus) == PLAY_CODE) {
 				if(gEmu.paused)	{
 					audio_resume();
