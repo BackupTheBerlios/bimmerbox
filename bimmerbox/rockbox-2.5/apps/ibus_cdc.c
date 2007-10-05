@@ -1,6 +1,6 @@
 /*
 
-  $Id: ibus_cdc.c,v 1.15 2007/10/01 12:16:39 duke4d Exp $
+  $Id: ibus_cdc.c,v 1.16 2007/10/05 23:45:44 duke4d Exp $
 
 Release Notes:
 
@@ -22,9 +22,21 @@ TODO:	Split code into different files
 
 #define LOWDIGIT(x)	(x&0x0F)
 #define HIDIGIT(x)	(x&0XF0)
-
+// #define DEBUGDAMIAN 1
 // Current build version
-#define CDC_EMU_VERSION	"Ver: 1.22dC"
+#define CDC_EMU_VERSION	"Ver: 1.22dS"
+//                               |||
+//                               ||- Damian's Version (0-9, A-Z, a-z)
+//                               |- d = Damian's Version
+//                               - 2 = Working Version
+
+/*
+  Damian's Versions:
+  1.22dB - Fast forward (buggy now)
+  1.22dC - Fast forward without checking
+  1.22dE - Next track and Forward buttons switched for testing
+  
+*/
 
 char EmptyString63[]="                                                               ";
 
@@ -1090,6 +1102,7 @@ void emu_switch_magazine(bool jump)
 
 	if(jump) emu_jump_to_disc(first_disc);
 		
+	gEmu.paused=false;
 	load_magazine_name();	
 }
 
@@ -1384,6 +1397,11 @@ WriteToDebug("\n", 2);
 
 				id3_disable();
 				lcd_puts_scroll(0,1,"RADIO: STOP");
+
+				
+#ifdef DEBUGDAMIAN
+				ibus_display("RADIO: STOP");
+#endif
 //			}
 
 			// Turn off PLAY status bit
@@ -1423,26 +1441,59 @@ WriteToDebug("\n", 2);
 //				}
 			}
 			lcd_puts_scroll(0,1,"RADIO: START");
+#ifdef DEBUGDAMIAN
+				ibus_display("RADIO: START");
+#endif
 					
 			break;
 
 		case RX_PKT_FWD:
 
 			lcd_puts_scroll(0,1,"RADIO: FWD");
+			
 			if (gConf.bSeekOnPlay)
 			{
-				// in pause state we seek
+				// in play state we seek
 				if (!gEmu.paused)
 				{
-//					struct mp3entry *id3 = audio_current_track();
-//					if(!id3) break;
-//
-//					// seeking SEEKSECONDS forward
-//					if (gEmu.offset + gConf.iSeekSeconds * 1000 < (int)id3->length)
-//					{
-					  gEmu.offset = gEmu.offset + gConf.iSeekSeconds * 1000;
-//					  
+						audio_pause();
+						struct mp3entry *id3 = audio_current_track();
+						int f_offs=0; // file offset
+						int f_size=0; // file size
+						int t_len=0;    // length of track (in miliseconds)
+						if(id3) {
+							f_offs = id3->offset;
+							f_size = id3->filesize;
+							t_len = id3->length;
+						}
+						
+						// sometimes there is no id3 info at all, and len = 0
+						// and offs = 0;
+						// we should only seek if valid filesize, length and offset are available.
+						if ((f_size > 0) && (f_offs > 0) && (t_len > 0))
+						{
+							// calculating the filesize for 1 second
+							int onesecond = f_size / (t_len / 1000);
+							
+							// if calculation is not successful, using heuristics
+							if (onesecond <= 0)
+								onesecond = 20000;
+							
+							int addition = onesecond * gConf.iSeekSeconds;
+							
+							// offset is file offset.
+							if (f_offs + addition < f_size)
+						    gEmu.offset = f_offs + addition;
+						  else
+						  	gEmu.offset = f_size-1;
+						}
 						playlist_start(gEmu.track,gEmu.offset);
+						
+#ifdef DEBUGDAMIAN
+						char txt[20];
+						snprintf(txt, sizeof(txt), "FWD %d", gEmu.offset);
+						ibus_display(txt);
+#endif
 						
 //						
 //						// showing new time on displays
@@ -1523,33 +1574,46 @@ WriteToDebug("\n", 2);
 				// in play state we seek
 				if (!gEmu.paused)
 				{
-//					if (gEmu.offset > gConf.iSeekSeconds * 1000)
+//					if (gEmu.offset > gConf.iSeekSeconds)
 //					{
-					  gEmu.offset = gEmu.offset - gConf.iSeekSeconds * 1000;
-					  if (gEmu.offset < 0)
-					  	gEmu.offset = 0;
-//					  
-						playlist_start(gEmu.track,gEmu.offset);
+  					audio_pause();  
+						struct mp3entry *id3 = audio_current_track();
+
+						int f_offs=0; // file offset
+						int f_size=0; // file size
+						int t_len=0;    // length of track (in miliseconds)
+						if(id3) {
+							f_offs = id3->offset;
+							f_size = id3->filesize;
+							t_len = id3->length;
+						}
 						
-//						
-//						// showing new time on displays
-//	          id3 = audio_current_track();
-//						if(!id3) break;
-//	
-//						int elapsed_seconds = id3->elapsed / 1000;
-//						id3Ctl.old_time = elapsed_seconds;
-//	
-//						int elapsed_minutes = elapsed_seconds/60;
-//						elapsed_seconds = elapsed_seconds % 60;
-//	
-//						int total_seconds = id3->length / 1000;
-//						int total_minutes = total_seconds / 60;
-//						total_seconds = total_seconds % 60;
-//	
-//						snprintf(id3Ctl.text, id3Ctl.width+1, "%02d:%02d-%02d:%02d", 
-//						  elapsed_minutes, elapsed_seconds, total_minutes, total_seconds);
-//						ibus_display(id3Ctl.text);
-//					}
+						// sometimes there is no id3 info at all, and len = 0
+						// and offs = 0;
+						// we should only seek if valid filesize, length and offset are available.
+						if ((f_size > 0) && (f_offs > 0) && (t_len > 0))
+						{
+							// calculating the filesize for 1 second
+							int onesecond = f_size / (t_len / 1000);
+							
+							// if calculation is not successful, using heuristics
+							if (onesecond <= 0)
+								onesecond = 20000;
+							
+							int addition = onesecond * gConf.iSeekSeconds;
+							
+							// offset is file offset.
+							if (f_offs - addition < 0)
+						    gEmu.offset = 0;
+						}
+
+						playlist_start(gEmu.track,gEmu.offset);
+#ifdef DEBUGDAMIAN
+						char txt[20];
+						snprintf(txt, sizeof(txt), "REW %d", gEmu.offset);
+						ibus_display(txt);
+#endif
+					
 					break;
 				}
 				else // if (!gEmu.paused)
@@ -1706,6 +1770,9 @@ WriteToDebug("\n", 2);
 			if(gConf.bMuteHack) cdc_status_track_starting();
 			//setup_index_update(false, HZ);
 			lcd_puts_scroll(0,1,"RADIO: NEXT");
+#ifdef DEBUGDAMIAN
+				ibus_display("RADIO: NEXT");
+#endif
 			break;
 
 		case RX_PKT_PREV:
@@ -1734,6 +1801,9 @@ WriteToDebug("\n", 2);
 			cdc_status_track_seeking();
 			if(gConf.bMuteHack) cdc_status_track_starting();
 			lcd_puts_scroll(0,1,"RADIO: PREV");
+#ifdef DEBUGDAMIAN
+				ibus_display("RADIO: PREV");
+#endif
 			break;
 
 		case RX_PKT_POLL_PHONE:
@@ -2433,10 +2503,13 @@ void emu_main(void)
 	lcd_puts(0,1,CDC_EMU_VERSION);
 	sleep(2*HZ);
 	
-
+#ifdef DEBUGDAMIAN
+  lcd_puts(0,0,"DAMIAN DEB");
+#else
 	if(gConf.iDebugLevel == 1)	lcd_puts(0,0,"BMW DEBUG=1");
 	else if(gConf.iDebugLevel == 2) lcd_puts(0,0,"BMW DEBUG=2");
 	else				lcd_puts(0,0,"BMW MODE");
+#endif
 
     ibus_init(); // init the I-Bus layer
     emu_init(); // init emulator
@@ -2535,9 +2608,9 @@ void emu_main(void)
 		msg_size = s_p & 0xFF;
 
 		if(s_p > 0) {		
-			dump_packet(buf, sizeof(buf), ibus_msg, msg_size);
-			lcd_clear_display();
-            lcd_puts_scroll(0,1,buf);
+		  dump_packet(buf, sizeof(buf), ibus_msg, msg_size);
+			// lcd_clear_display();
+      //      lcd_puts_scroll(0,1,buf);
 			emu_process_packet(ibus_msg, msg_size, s_p & 0xFF00);
 		}
 
